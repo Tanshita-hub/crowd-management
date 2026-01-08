@@ -1,0 +1,401 @@
+    <!DOCTYPE html>
+<html>
+<head>
+    <title>CrowdManagement System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;800&display=swap" rel="stylesheet">
+    <style>
+    /* --- Background & Global --- */
+    body {
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        overflow-x: hidden;
+        background: linear-gradient(45deg, #00d2ff, #22ffb0, #f321d7, #ffec61);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+    }
+
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        padding: 50px;
+        border-radius: 30px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        text-align: center;
+        width: 350px;
+    }
+
+    h2 { font-weight: 800; margin-bottom: 25px; color: #1a1a1a; }
+
+    input {
+        width: 85%;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        border: none;
+        background: rgba(0,0,0,0.05);
+        font-size: 16px;
+        transition: all 0.3s;
+    }
+
+    input:focus {
+        background: rgba(255,255,255,1);
+        outline: none;
+        box-shadow: 0 0 15px rgba(0,210,255,0.3);
+    }
+
+    button {
+        padding: 12px 25px;
+        border: none;
+        border-radius: 50px;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    button:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+
+    #login-section button { width: 100%; background: #6c5ce7; }
+
+    #error-msg { color: #d63031; display: none; margin-top: 10px; font-weight: bold; }
+
+    /* --- Dashboard --- */
+    #dashboard-section {
+        display: none; /* hidden initially */
+        width: 90%;
+        max-width: 1000px;
+        flex-direction: row;
+        padding: 0;
+        border-radius: 30px;
+        overflow: hidden;
+    }
+
+    /* Sidebar */
+    #sidebar {
+        width: 220px;
+        background: #2d3436;
+        color: white;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #sidebar h3 { margin: 0 0 20px 0; font-size: 18px; }
+    #sidebar button {
+        width: 100%;
+        background: #636e72;
+        color: white;
+        padding: 12px;
+        margin-bottom: 5px;
+    }
+
+    #sidebar button:hover { background: #6c5ce7; }
+
+    /* Main Content */
+    #main-content {
+        flex: 1;
+        padding: 30px;
+        background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(10px);
+    }
+
+    /* Views */
+    #homeView, #placesView { width: 100%; }
+    #placesView { display: none; }
+
+    #map { width: 100%; height: 300px; border-radius: 8px; }
+
+    /* Danger popup */
+    #dangerPopup {
+        display: none;
+        background: #d63031;
+        color: white;
+        padding: 15px;
+        border-radius: 12px;
+        margin-top: 15px;
+        font-weight: bold;
+    }
+
+    /* Live counts */
+    .log-box {
+        text-align: left;
+        overflow-y: visible;
+        background: rgba(255,255,255,0.5);
+        border-radius: 15px;
+        padding: 15px;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .safe { color: #00b894; }
+    .danger { color: #d63031; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SECTION -->
+<div id="login-section" class="glass-card">
+    <h2>System Login</h2>
+    <input type="text" id="userIn" placeholder="Username">
+    <input type="password" id="passIn" placeholder="Password">
+    <button onclick="checkLogin()">Enter Dashboard</button>
+    <p id="error-msg">Invalid Credentials! Try 1234</p>
+</div>
+
+<!-- DASHBOARD SECTION -->
+<div id="dashboard-section">
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <h3>🚦 CrowdSys</h3>
+        <button onclick="showHome()">🏠 Home</button>
+        <button onclick="showPlaces()">📍 Places</button>
+    </div>
+
+    <!-- Main content -->
+    <div id="main-content">
+        <!-- HOME VIEW -->
+        <div id="homeView">
+            <h3>Live Crowd Location</h3>
+            <div id="map"></div>
+            <div id="dangerPopup">🚨 <span id="dangerPlace"></span> is OVERCROWDED!</div>
+        </div>
+
+        <!-- PLACES VIEW -->
+        <div id="placesView">
+            <h3>Live Crowd Count Nearby</h3>
+            <div id="liveCounts" class="log-box"></div>
+
+            <!-- Firebase Demo -->
+            <hr>
+            <button onclick="loadFirestoreData()" style="margin-top:20px; padding:10px 20px; border-radius:10px; background:#6c5ce7; color:white; font-weight:bold;">Show Firebase Data</button>
+            <div id="firestoreData" style="margin-top:20px;"></div>
+
+            <div style="margin-top:15px;">
+                <input type="text" id="newPlace" placeholder="Place Name" style="padding:5px;"/>
+                <input type="text" id="newCrowd" placeholder="Crowd Level" style="padding:5px;"/>
+                <button onclick="addPlaceDemo()" style="padding:5px 10px; background:#00b894; color:white;">Add Place</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<audio id="alertSound">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+</audio>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRmfh4uxv4bKtRfN9O0n5l7kMjqaooj2E"></script>
+<script>
+let map, marker;
+let livePlaces = [];
+let liveStarted = false;
+
+function checkLogin() {
+    const u = document.getElementById('userIn').value;
+    const p = document.getElementById('passIn').value;
+
+    if (u === "1234" && p === "1234") {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('dashboard-section').style.display = 'flex';
+        initMap();
+    } else {
+        document.getElementById('error-msg').style.display = 'block';
+    }
+}
+
+function showHome() {
+    document.getElementById("homeView").style.display = "block";
+    document.getElementById("placesView").style.display = "none";
+}
+
+function showPlaces() {
+    document.getElementById("homeView").style.display = "none";
+    document.getElementById("placesView").style.display = "block";
+}
+
+// Map initialization
+function initMap() {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+    }
+
+    navigator.geolocation.watchPosition(position => {
+        const liveLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+        };
+
+        if (!map) {
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 15,
+                center: liveLocation
+            });
+
+            marker = new google.maps.Marker({
+                position: liveLocation,
+                map: map,
+                title: "You are here 📍"
+            });
+        } else {
+            marker.setPosition(liveLocation);
+            map.setCenter(liveLocation);
+        }
+
+        if (!liveStarted) {
+            fetch("/live-places-base", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(liveLocation)
+            })
+            .then(res => res.json())
+            .then(data => {
+                livePlaces = data;
+                renderLiveCounts();
+                startLiveUpdates();
+                liveStarted = true;
+            });
+        }
+    }, () => alert("Location access required"));
+}
+
+// Render live counts
+function renderLiveCounts() {
+    document.getElementById("liveCounts").innerHTML =
+        livePlaces.map(p => {
+            let level = "LOW";
+            let statusClass = "safe";
+
+            if (p.current > 0.6 * p.capacity) { level = "HIGH"; statusClass = "danger"; }
+            if (p.current > 0.75 * p.capacity) { level = "DANGER"; statusClass = "danger"; }
+
+            return `<div style="margin-bottom:14px;">
+                <b>${p.name}</b><br>
+                📏 Distance: ${p.distance} m<br>
+                👥 People: <b>${p.current}/${p.capacity}</b><br>
+                🚦 Status: <b class="${statusClass}">${level}</b>
+            </div>`;
+        }).join("");
+}
+
+// Live updates
+function startLiveUpdates() {
+    setInterval(() => {
+        fetch("/live-places-current")
+            .then(res => res.json())
+            .then(data => {
+                livePlaces = data;
+                renderLiveCounts();
+                checkDangerAlerts();
+            });
+    }, 3000);
+}
+
+// Danger alert
+function checkDangerAlerts() {
+    if (livePlaces.length === 0) return;
+
+    let mostCrowded = livePlaces.reduce((max, p) =>
+        p.current / p.capacity > max.current / max.capacity ? p : max
+    );
+
+    const popup = document.getElementById("dangerPopup");
+    const placeName = document.getElementById("dangerPlace");
+    const alertSound = document.getElementById("alertSound");
+
+    const alertThreshold = 0.6;
+
+    if (mostCrowded.current / mostCrowded.capacity >= alertThreshold) {
+        popup.style.display = "block";
+        placeName.innerText = mostCrowded.name;
+        alertSound.play();
+    } else {
+        popup.style.display = "none";
+    }
+}
+
+// --- FIREBASE FUNCTIONS ---
+async function loadFirestoreData() {
+    try {
+        const res = await fetch("/get-places");
+        const data = await res.json();
+
+        let html = "<h3>Firestore Crowd Records</h3>";
+        html += "<table border='1' cellpadding='6' style='width:100%; border-collapse:collapse;'>";
+        html += "<tr><th>Place</th><th>Crowd Level</th><th>Time</th></tr>";
+
+        if (data.length === 0) {
+            html += "<tr><td colspan='3'>No data yet</td></tr>";
+        } else {
+            data.forEach(p => {
+                let createdAt = p.createdAt;
+                // Handle Firestore Timestamp or JS Date
+                if (createdAt && createdAt._seconds) {
+                    createdAt = new Date(createdAt._seconds * 1000);
+                } else {
+                    createdAt = new Date(createdAt);
+                }
+
+                html += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.crowdLevel}</td>
+                    <td>${createdAt.toLocaleString()}</td>
+                </tr>`;
+            });
+        }
+
+        html += "</table>";
+        document.getElementById("firestoreData").innerHTML = html;
+    } catch (err) {
+        console.error("Error fetching Firestore data:", err);
+        alert("Failed to load Firebase data. Make sure server.js is running.");
+    }
+}
+
+
+async function addPlaceDemo() {
+    const name = document.getElementById("newPlace").value;
+    const crowdLevel = document.getElementById("newCrowd").value;
+
+    if (!name || !crowdLevel) {
+        alert("Enter both fields!");
+        return;
+    }
+
+    const res = await fetch("/add-place", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, crowdLevel })
+    });
+
+    const data = await res.json();
+    alert(data.message || "Place added");
+
+    loadFirestoreData();
+}
+</script>
+
+</body>
+</html>
